@@ -2,8 +2,10 @@ package sign
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	pb "github.com/tron-us/go-btfs-common/protos/online"
 	"log"
@@ -121,9 +123,13 @@ func RecoverInfo(signature []byte, hashBytes []byte) (common.Address, error) {
 }
 
 func RecoverInfoExt(signature []byte, info *pb.SignedInfo) (common.Address, error) {
-	_, hash, err := SignInfo(info); if err != nil {
+	fmt.Println("...1.1.1")
+	_, hash, err := SignInfo(info)
+	if err != nil {
 		return [20]byte{}, err
 	}
+	fmt.Println("...1.1.2", string(signature), hexutil.Encode(hash), info)
+
 	return RecoverInfo(signature, hash)
 }
 
@@ -133,4 +139,3 @@ func VerifySignature(addr string) bool {
 	}
 	return false
 }
-

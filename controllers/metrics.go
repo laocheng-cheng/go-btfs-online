@@ -44,23 +44,34 @@ func UpdateSignMetricsHandler(sm *pb.ReqSignMetrics) (resp *pb.RespSignMetrics, 
 	lastSignedInfo := payLoad.LastSignedInfo
 	fmt.Println("----", len(lastSignature), string(lastSignature), lastSignedInfo)
 
+	fmt.Println("...1")
 	// 1.Verify last signature
-	if len(lastSignature)>0 || (lastSignedInfo != nil && lastSignedInfo.Nonce>0) {
-		lastSignedAddress, err := sign.RecoverInfoExt([]byte(lastSignature), lastSignedInfo)
+	if len(lastSignature) > 0 || (lastSignedInfo != nil && lastSignedInfo.Nonce > 0) {
+		fmt.Println("...1.1")
+		//lastSignature = lastSignature[2:]
+		lastSignatureBytes, err := hexutil.Decode(lastSignature)
 		if err != nil {
 			return nil, err
 		}
+		lastSignedAddress, err := sign.RecoverInfoExt(lastSignatureBytes, lastSignedInfo)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println("...1.2")
 		if !sign.VerifySignature(lastSignedAddress.String()) {
 			return nil, errors.New("VerifySignature failed! ")
 		}
+		fmt.Println("...1.3")
 	}
+	fmt.Println("...2")
 
 	// 2.check limit
 	now := uint32(time.Now().Unix())
 	if lastSignedInfo != nil && now-lastSignedInfo.SignedTime < 50*60 {
-		return nil, errors.New("too many requests! ")
+		//return nil, errors.New("too many requests! ")
+		fmt.Println("... too many requests! ")
 	}
-
+	fmt.Println("...3")
 	// 3.get signature
 	signature, baseInfo, err := getSignedInfo(&nm, lastSignedInfo, now)
 	log.Debug("online getSignedInfo",
@@ -73,7 +84,7 @@ func UpdateSignMetricsHandler(sm *pb.ReqSignMetrics) (resp *pb.RespSignMetrics, 
 
 	// 4.return pack (signature, baseInfo) to host
 	resp = &pb.RespSignMetrics{
-		Code:        pb.ResponseCode_SUCCESS,
+		Code: pb.ResponseCode_SUCCESS,
 		SignedInfo: &pb.SignedInfo{
 			Peer:        baseInfo.Peer,
 			CreatedTime: baseInfo.CreatedTime,
@@ -82,7 +93,7 @@ func UpdateSignMetricsHandler(sm *pb.ReqSignMetrics) (resp *pb.RespSignMetrics, 
 			BttcAddress: baseInfo.BttcAddress,
 			SignedTime:  baseInfo.SignedTime,
 		},
-		Signature:   hexutil.Encode(signature),
+		Signature: hexutil.Encode(signature),
 	}
 
 	return resp, nil
@@ -116,7 +127,6 @@ func checkPeerKey(sm *pb.ReqSignMetrics) (err error) {
 	return nil
 }
 
-
 func getSignedInfo(nm *nodepb.Node, last *pb.SignedInfo, now uint32) (signature []byte, info *pb.SignedInfo, err error) {
 	var nonce uint32
 	var bttcAddr string
@@ -141,12 +151,14 @@ func getSignedInfo(nm *nodepb.Node, last *pb.SignedInfo, now uint32) (signature 
 		Version:     nm.BtfsVersion,
 		Nonce:       nonce + 1,
 		BttcAddress: bttcAddr,
-		SignedTime:  uint32(time.Now().Unix()),
+		SignedTime:  now,
 	}
 	signature, _, err = sign.SignInfo(info)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	fmt.Printf("------- resp info = %+v \n", info)
 
 	return signature, info, nil
 }
