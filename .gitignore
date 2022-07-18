@@ -1,0 +1,8 @@
+.idea/
+main
+
+bin/*
+!bin/test-go-fmt
+!bin/test-go-mod
+
+# ignore personal stages
