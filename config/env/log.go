@@ -7,7 +7,7 @@ import (
 // In the env package to resolve circular dependencies
 // Since config package needs to log and log package needs to config
 var (
-	LogFile = "status_server.log"
+	LogFile = "online_server.log"
 )
 
 func init() {

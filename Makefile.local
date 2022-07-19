@@ -2,94 +2,22 @@
 
 default: run
 
-REDIS_HOST ?= localhost
-
-DB_USER ?= `whoami`
-DB_HOSTNAME ?= localhost
-DB_URL="postgresql://$(DB_USER)@$(DB_HOSTNAME):5432/$(DB_NAME)"
-DB_NUM_CONNS ?= 300
-STRESS_SIZE ?= 5000000
-STRESS_OFFSET ?= 0
-STRESS_HISTORY_ENABLED ?= true
-DB_STMT_TIMEOUT ?= 30
 PORT ?= :50051
-DB_NAME ?= db_status
-ENV ?= production
-MAKEFILE_PATH=./Makefile
-
-EVERY_NODE_STAT_TIME ?= 1
-DISCOVERY_REPORT_AT_LEAST_NUM ?= 1
-DISCOVERY_REPORT_AT_LEAST_TIMEZONE ?= 10
-
-# variables for manul deploy use
-last_git_commit := $(shell git rev-parse HEAD)
-timestamp := $(shell date +%s)
-
-version := master-$(last_git_commit)-$(timestamp)
-# stage_injection := stage=staging
-stage_injection :=
+SIGN_ADDR ?= "0x22df207EC3C8D18fEDeed87752C5a68E5b4f6FbD"
+SIGN_PRIVATE_KEY = "744ba22387c27cf73dff283a37f0a7e63054a86be15965be97c807816d79da39"
 
 export TGC_PREFIX=SS_
-
-install:
-	brew install postgresql go
-	brew install redis go
-	brew services start postgresql
-	brew services start redis
-	createdb $(DB_NAME)
 
 fmt:
 	go fmt ./...
 	go mod tidy
 
-deploy:
-	make version=$(version) && make version=$(version) push && make version=$(version) run
-
-test:
-	dropdb --if-exists $(DB_NAME)
-	createdb $(DB_NAME)
-	dropdb $(DB_NAME)
-
 run:
-	GO111MODULE=on SS_DB_URL=$(DB_URL) SS_DB_NUM_CONNS=$(DB_NUM_CONNS) SS_DB_STMT_TIMEOUT=$(DB_STMT_TIMEOUT) \
-	SS_REDIS_HOST=$(DB_REDIS_HOST) \
-	EVERY_NODE_STAT_TIME=$(EVERY_NODE_STAT_TIME) \
-	DISCOVERY_REPORT_AT_LEAST_NUM=$(DISCOVERY_REPORT_AT_LEAST_NUM) \
-	DISCOVERY_REPORT_AT_LEAST_TIMEZONE=$(DISCOVERY_REPORT_AT_LEAST_TIMEZONE) \
+	GO111MODULE=on SS_PORT=$(PORT) SS_SIGN_ADDR=$(SIGN_ADDR) SS_SIGN_PRIVATE_KEY=$(SIGN_PRIVATE_KEY) \
 	go run main.go
 
 bin:
 	mkdir -p bin
-
-db_init:
-	SS_DB_URL=$(DB_URL) ./bin/migration init
-
-db_up:
-	SS_DB_URL=$(DB_URL) ./bin/migration up
-
-db_down:
-	SS_DB_URL=$(DB_URL) ./bin/migration down
-
-db_fill:
-	cd tools/generator; GO111MODULE=on go build -o ../../bin/generator
-	SS_ENV=$(ENV) SS_DB_URL=$(DB_URL) SS_DB_NUM_CONNS=$(DB_NUM_CONNS) \
-	./bin/generator -t node -s $(STRESS_OFFSET) -n $(STRESS_SIZE) -h $(STRESS_HISTORY_ENABLED)
-
-build: bin
-	GO111MODULE=on go build -o ./bin/status-server main.go
-	cp IP2LOCATION-LITE-DB5.BIN ./bin
-
-tools: bin
-	cd tools/migrations; GO111MODULE=on go build -o ../../bin/migration migrations.go
-	if [ -d "./bin/migrations" ]; then rm -rf ./bin/migrations; fi
-	mkdir ./bin/migrations
-	cp -r ./migrations ./bin/
-
-mock:
-	cd tools/client_mock; GO111MODULE=on SS_DB_URL=$(DB_URL) SS_DB_NUM_CONNS=$(DB_NUM_CONNS) SS_DB_STMT_TIMEOUT=$(DB_STMT_TIMEOUT) go run client.go
-
-inject_secrets:
-	make $(stage_injection) update-secrets inject-secrets
 
 test_go_fmt:
 	./bin/test-go-fmt
