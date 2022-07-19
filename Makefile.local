@@ -1,0 +1,28 @@
+.PHONY: deploy
+
+default: run
+
+PORT ?= :50051
+SIGN_ADDR ?= "0x22df207EC3C8D18fEDeed87752C5a68E5b4f6FbD"
+SIGN_PRIVATE_KEY = "744ba22387c27cf73dff283a37f0a7e63054a86be15965be97c807816d79da39"
+
+export TGC_PREFIX=SS_
+
+fmt:
+	go fmt ./...
+	go mod tidy
+
+run:
+	GO111MODULE=on SS_PORT=$(PORT) SS_SIGN_ADDR=$(SIGN_ADDR) SS_SIGN_PRIVATE_KEY=$(SIGN_PRIVATE_KEY) \
+	go run main.go
+
+bin:
+	mkdir -p bin
+
+test_go_fmt:
+	./bin/test-go-fmt
+.PHONY: test_go_fmt
+
+test_go_mod:
+	./bin/test-go-mod
+.PHONY: test_go_mod
